@@ -38,25 +38,25 @@ app.get("/location-info", async (req, res) => {
   const { lat, lng } = geocodeResponse.data.results[0].geometry.location;
 
   // Call both elevation & timezone APIs concurrently
-  const responses = await Promise.allSettled([
-    mapsClient.get(`/elevation/json`, {
-      params: {
-        locations: `${lat},${lng}`,
-      },
-    }),
-    mapsClient.get(`/timezone/json`, {
-      params: {
-        location: `${lat},${lng}`,
-        timestamp: Date.now() / 1000,
-      },
-    }),
+  const responses = await Promise.all([
+    mapsClient
+      .get(`/elevation/json`, {
+        params: {
+          locations: `${lat},${lng}`,
+        },
+      })
+      .catch((err) => err),
+    mapsClient
+      .get(`/timezone/json`, {
+        params: {
+          location: `${lat},${lng}`,
+          timestamp: Date.now() / 1000,
+        },
+      })
+      .catch((err) => err),
   ]);
 
-  const successfulResponses = responses
-    .filter((response) => response.status === "fulfilled")
-    .map((response) => response.value);
-
-  const [elevationResponse, timezoneResponse] = successfulResponses;
+  const [elevationResponse, timezoneResponse] = responses;
 
   if (!elevationResponse.data?.results?.[0]?.elevation) {
     return res.status(500).send({
